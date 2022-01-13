@@ -1,0 +1,485 @@
+/* Variable declaration. */
+private Shape s;
+private boolean isMoving, shapePlacedInArea, defaultSides;
+private int xOffset, yOffset;
+private int mouseStartX, mouseStartY;
+private String state;
+private int score;
+private PFont title, buttonText, howToPlayTitle;
+private int randomWaitTime, timer;
+private int shapeTimer1, shapeTimer2;
+private PImage redHappyFace, redMediumFace, redSadFace, blueHappyFace, blueMediumFace, blueSadFace;
+
+// setup() is run once.
+// Includes variable initialisation
+void setup() {
+  
+  // Creates the canvas that the game will draw on.
+  size(600,400);
+  
+  // state is set to 'MainMenu' at the start.
+  state = "MainMenu";
+  
+  // Creates the new shape that will be draggable.
+  s = new Shape();
+  
+  // sets score to 0.
+  score = 0;
+  
+  // The shape starts not in an area.
+  shapePlacedInArea = false;
+  
+  // Creates a new font and stores it in the variable 'title'.
+  title = createFont("Arial", 64);
+  // Creates a new font for the text within buttons.
+  buttonText = createFont("Arial", 16);
+  // Creates a new font for the title on the how to play menu.
+  howToPlayTitle = createFont("Arial", 32);
+  
+  /* Sets isMoving to false as the shape will be stationary
+  at the beginning of the game. */
+  isMoving = false;
+  
+  // Game starts with default sides.
+  defaultSides = true;
+  
+  // Sets the shape timers to 3 to start.
+  shapeTimer1 = 3;
+  shapeTimer2 = 3;
+  
+  // Loading the images that will be within each shape.
+  redHappyFace = loadImage("RedHappyFace.png");
+  redMediumFace = loadImage("RedMediumFace.png");
+  redSadFace = loadImage("RedSadFace.png");
+  
+  blueHappyFace = loadImage("BlueHappyFace.png");
+  blueMediumFace = loadImage("BlueMediumFace.png");
+  blueSadFace = loadImage("BlueSadFace.png");
+  
+}
+
+// Constant loop
+void draw() {
+  
+  if (state == "MainMenu") {
+    
+    // If the user returns to the main menu, reset their score.
+    score = 0;
+    
+    background(255);
+
+    // Creating menu title
+    textFont(title);
+    fill(255,0,0);
+    textAlign(CENTER);
+    text("Main Menu", 300, 100);
+    
+    redHappyFace.resize(100,100);
+    image(redHappyFace, 50, 150);
+    blueHappyFace.resize(100,100);
+    image(blueHappyFace, 450, 150);
+
+    // Creating menu buttons
+    textFont(buttonText);
+    rectMode(CENTER);
+    fill(230);
+    rect(300, 175, 150, 35, 7); // Creates the play button shape. '7' indicates it is a round button.
+    fill(0);
+    text("PLAY", 300, 180);  // Creates the play button text.
+
+    fill(230);
+    rect(300, 225, 150, 35, 7); // Creates the how to play button shape. '7' indicates it is a round button.
+    fill(0);
+    text("HOW TO PLAY", 300, 230);  // Creates the how to play button text.
+
+    fill(230);
+    rect(300, 275, 150, 35, 7);  // Creates the exit button shape. '7' indicates it is a round button.
+    fill(0);
+    text("EXIT", 300, 280);  // Creates the exit button text.
+    
+  }
+  
+  // If play button clicked
+  else if (state == "PlayGame") {
+    
+    // Creating the game interface.
+    background(255);
+    rectMode(CORNER);
+
+    fill(0,0,0,255);
+    text("SCORE: "+score, 300,25);
+
+    if (defaultSides) {
+      // Area 1 (left side, blue)
+      fill(0, 0, 255, 100);
+      rect(0, 0, 200, 399);
+  
+      // Area 2 (right side, red)
+      fill(255, 0, 0, 100);
+      rect(399, 0, 200, 399);
+    } else if (!defaultSides) {
+      // If defaultSides = false then draw the red area on the left side.
+      fill(255,0,0,100);
+      rect(0,0,200,399);
+      
+      // If defaultSides = false then draw the blue area on the right side.
+      fill(0,0,255,100);
+      rect(399,0,200,399);
+    }
+    
+    // displays the new shape
+    s.display();
+    
+    /* If the shape is being dragged, then the 'move'
+    method in the Shape class is called. */
+    if (isMoving) {
+      
+      s.move();
+      
+    }
+    
+    /* If the shape is placed in within a coloured area
+    this if statement will be executed. */
+    if (shapePlacedInArea) {
+      shapeTimer1 = 3;
+      shapePlacedInArea = false;
+    }
+    
+    /*
+    This conditional 'if' statement constantly checks if 1 second has passed.
+    If 1 second has passed, decrement the shapeTimer1 variable (which holds the
+    timer value displayed to the user within each shape). If this variable is equal
+    to 0 and the shape has not been placed in the correct area then the game is lost
+    */
+    if (millis() > shapeTimer2 + 1000) {
+      shapeTimer2 = millis();
+      shapeTimer1--;
+      if (shapeTimer1 == 0 && !shapePlacedInArea) {
+        println("GAME OVER!");
+        background(255);
+        fill(0,0,0,255);
+        text("GAME OVER!\n\nSCORE: "+score+"\n\nPress m to return to the main menu!",300,150);
+        textFont(title);
+        fill(255,0,0);
+        text("Reaction", 300, 100);
+        redSadFace.resize(100,100);
+        image(redSadFace, 50, 150);
+        blueSadFace.resize(100,100);
+        image(blueSadFace, 450, 150);
+        noLoop();  // noLoop() prevents draw() from being looped to show the game over screen to the user.
+      }
+    }
+    
+    // randomWaitTime holds a random value between 8000 and 15000, which will be the milliseconds the game waits before swapping the red and blue areas.
+    randomWaitTime = int(random(8000,15000));
+    
+    // If the current time is greater than timer + the value held in randomWaitTime then swap the sides.
+    if (millis() > timer + randomWaitTime) {
+      timer = millis();
+      defaultSides = !defaultSides;
+    }
+    
+  }
+  
+  // If how to play clicked do the following:
+  else if (state == "HowToPlay") {
+
+    // Creating the how to play interface.
+
+    rectMode(CORNER);
+
+    textFont(howToPlayTitle);
+    text("How To Play", 300, 75);
+
+    textFont(buttonText);
+    text("Random shapes will appear in the center of the game screen.\n\nDrag these shapes to the correct side!\n\nDrag blue shapes to the blue side, and red shapes to the red side.\n\nBe careful! The sides may change...\n\nReturning to the main menu resets your score!\n\nPress M to return to the main menu any time!", 300, 125);
+  
+  } else {  // If there is any other state, exit the game.
+
+    exit();
+    
+  }
+}
+  
+
+/* mouseDragged is only called when the user begins
+to drag their mouse. */
+void mouseDragged() {
+    
+  if (mouseX > s.shapeX && mouseX < s.shapeX + 50) {
+  
+    if (mouseY > s.shapeY && mouseY < s.shapeY + 50) {
+      
+      isMoving = true;
+      
+    }
+  }
+}
+
+// If the mouse is released the following method is called:
+void mouseReleased() {
+  
+  // Stop dragging the shape.
+  isMoving = false;
+
+  if (defaultSides) {
+
+    // If the colour of the shape dragged is blue, check the following conditions:
+    if (s.randColour == 2) {
+  
+      /*
+      If the top left corner of the shape being dragged and the top right corner 
+       are both within the blue area then it has been dropped in the correct area.
+       */
+      if (s.shapeX >= 0 && s.shapeX <= 200 && s.shapeX+50 >= 0 && s.shapeX+50 <= 200) {
+        
+        // Same for the Y coordinates of the shape.
+        if (s.shapeY >= 0 && s.shapeY <= 400 && s.shapeY+50 >= 0 && s.shapeY+50 <= 400) {
+  
+          // Add 1 to score and set the shapePlacedInArea variable to true.
+          score++;
+          shapePlacedInArea = true;
+          
+          // Now set the variables needed to create a new shape in a new random position to new random values and set other variables back to their default values.
+          s = new Shape();
+          
+        }
+      }
+      
+      /*
+      If the blue shape is placed within the red area then do the following:
+      */
+      if (s.shapeX >= 400 && s.shapeX <= 600 && s.shapeX+50 >= 400 && s.shapeX+50 <= 600) {
+        
+        // Same for the Y coordinates of the shape.
+        if (s.shapeY >= 0 && s.shapeY <= 400 && s.shapeY+50 >= 0 && s.shapeY+50 <= 400) {
+  
+          // Take 5 off score
+          score=score-5;
+          shapePlacedInArea = true;
+          
+          // Now set the variables needed to create a new shape in a new random position to new random values and set other variables back to their default values.
+          s = new Shape();
+          
+        }
+      }
+  
+      // Else if the colour of the shape is red, check the following conditions:
+    } else if (s.randColour == 1) {
+  
+      /*
+      If the top left corner of the shape being dragged and the top right corner are
+       both within the red area then it has been dropped in the correct area
+       */
+      if (s.shapeX >= 400 && s.shapeX <= 600 && s.shapeX+50 >= 400 && s.shapeX+50 <= 600) {
+        
+        // Same for the Y coordinates of the shape.
+        if (s.shapeY >= 0 && s.shapeY <= 400 && s.shapeY+50 >= 0 && s.shapeY+50 <= 400) {
+  
+          // Add 1 to score and set the shapePlacedInArea variable to true.
+          score++;
+          shapePlacedInArea = true;
+          
+          // Now set the variables needed to create a new shape in a new random position to new random values and set other variables back to their default values.
+          s = new Shape();
+          
+        }
+      }
+      
+      /*
+      If the red shape is placed within the blue area then do the following:
+      */
+      if (s.shapeX >= 0 && s.shapeX <= 200 && s.shapeX+50 >= 0 && s.shapeX+50 <= 200) {
+        
+        // Same for the Y coordinates of the shape.
+        if (s.shapeY >= 0 && s.shapeY <= 400 && s.shapeY+50 >= 0 && s.shapeY+50 <= 400) {
+  
+          // Take 5 off score
+          score=score-5;
+          shapePlacedInArea = true;
+          
+          // Now set the variables needed to create a new shape in a new random position to new random values and set other variables back to their default values.
+          s = new Shape();
+          
+        }
+      }
+    }
+  }
+  
+  // Else if defaultSides = false then
+  if (!defaultSides) {
+    
+    // If the shape of the colour is red, check the following conditions:
+    if (s.randColour == 1) {
+  
+      /*
+      If the top left corner of the shape being dragged and the top right corner 
+       are both within the red area then it has been dropped in the correct area.
+       */
+      if (s.shapeX >= 0 && s.shapeX <= 200 && s.shapeX+50 >= 0 && s.shapeX+50 <= 200) {
+        
+        // Same for the Y coordinates of the shape.
+        if (s.shapeY >= 0 && s.shapeY <= 400 && s.shapeY+50 >= 0 && s.shapeY+50 <= 400) {
+  
+          // Add 1 to score and set the shapePlacedInArea variable to true.
+          score++;
+          shapePlacedInArea = true;
+          
+          // Now set the variables needed to create a new shape in a new random position to new random values and set other variables back to their default values.
+          s = new Shape();
+          
+        }
+      }
+      
+      /*
+      If the red shape is placed within the blue area then do the following:
+      */
+      if (s.shapeX >= 400 && s.shapeX <= 600 && s.shapeX+50 >= 400 && s.shapeX+50 <= 600) {
+        
+        // Same for the Y coordinates of the shape.
+        if (s.shapeY >= 0 && s.shapeY <= 400 && s.shapeY+50 >= 0 && s.shapeY+50 <= 400) {
+  
+          // Take 5 off score
+          score=score-5;
+          
+          // Now set the variables needed to create a new shape in a new random position to new random values and set other variables back to their default values.
+          s = new Shape();
+          
+        }
+      }
+  
+      // Else if the colour of the shape is blue, check the following conditions:
+    } else if (s.randColour == 2) {
+  
+      /*
+      If the top left corner of the shape being dragged and the top right corner are
+       both within the blue area then it has been dropped in the correct area
+       */
+      if (s.shapeX >= 400 && s.shapeX <= 600 && s.shapeX+50 >= 400 && s.shapeX+50 <= 600) {
+        
+        // Same for the Y coordinates of the shape.
+        if (s.shapeY >= 0 && s.shapeY <= 400 && s.shapeY+50 >= 0 && s.shapeY+50 <= 400) {
+  
+          // Add 1 to score and set the shapePlacedInArea variable to true.
+          score++;
+          shapePlacedInArea = true;
+          
+          // Now set the variables needed to create a new shape in a new random position to new random values and set other variables back to their default values.
+          s = new Shape();
+          
+        }
+      }
+      
+      /*
+      If the blue shape is placed within the red area then do the following:
+      */
+      if (s.shapeX >= 0 && s.shapeX <= 200 && s.shapeX+50 >= 0 && s.shapeX+50 <= 200) {
+        
+        // Same for the Y coordinates of the shape.
+        if (s.shapeY >= 0 && s.shapeY <= 400 && s.shapeY+50 >= 0 && s.shapeY+50 <= 400) {
+  
+          // Take 5 off score
+          score=score-5;
+          
+          // Now set the variables needed to create a new shape in a new random position to new random values and set other variables back to their default values.
+          s = new Shape();
+          
+        }
+      }
+    }
+   }
+}
+
+/* mousePressed is called when a mouse button is
+pressed. */
+void mousePressed() {
+  
+  // Grab the coordinates of the mouse once the player has clicked.
+  mouseStartX = mouseX;
+  mouseStartY = mouseY;
+
+  if (state == "MainMenu") {
+
+    // If on the main menu and the player clicks between the following coordinates (the play button), play game.
+    if (mouseStartX >= 225 && mouseStartX <= 375) {
+      if (mouseStartY >= 157.5 && mouseStartY <= 192.5) {
+
+        state = "PlayGame";
+        background(255);
+        println(state + " clicked");
+        
+        shapeTimer1 = 3;
+        shapeTimer2 = 3;
+
+        int randColour = int(random(1, 3));
+
+        if (randColour == 1) {
+          
+          fill(255, 0, 0, 255);
+          
+        } else {
+          
+          fill(0, 0, 255, 255);
+          
+        }
+      }
+    }
+
+    // If on main menu & the player clicks between the following coordinates (how to play button), display the how to play screen.
+    if (mouseStartX >= 225 && mouseStartX <= 375) {
+      
+      if (mouseStartY >= 207.5 && mouseStartY <= 242.5) {
+
+        state = "HowToPlay";
+        background(255);
+        println(state + " clicked");
+        
+      }
+    }
+
+    // If on main menu & the player clicks between the following coordinates (exit button), exit the game.
+    if (mouseStartX >= 225 && mouseStartX <= 375) {
+      
+      if (mouseStartY >= 257.5 && mouseStartY <= 292.5) {
+
+        state = "ExitGame";
+        println(state + " clicked");
+        
+      }
+    }
+  }
+  
+  else if (state == "PlayGame") {
+  
+    /* This helps fix the position of the shape when being
+    dragged by the player. Whilst playing the game, find
+    the delta between the corner of the shape and the mouse
+    position when the user clicks on the shape. */
+    xOffset = mouseX - s.shapeX;
+    yOffset = mouseY - s.shapeY;
+  
+  }
+  
+}
+
+// If a key is pressed then the following method is called:
+void keyPressed() {
+
+  // If m key pressed during game or on how to play screen, return user to main menu.
+  if (state == "PlayGame" || state == "HowToPlay") {
+
+    if (key == 109) {  // 109 is the ASCII code for 'm'.
+    
+      // Take the player back to the main menu, set the next shapes position to a new random position, it's colour to either blue or red and set the shape timer back to 3.
+      background(255);
+      state = "MainMenu";
+      println("m pressed!");
+      s = new Shape();
+      
+      // This loop() command has to be placed here as when the game ends, the noLoop() command is called, which prevents the draw() method from being looped.
+      // The draw() method is needed to be looped for the game to run successfully.
+      loop();
+      
+    }
+  }
+}
