@@ -1,0 +1,95 @@
+class Shape {
+  
+  private int randColour;
+  private int shapeX, shapeY;
+  
+  Shape() {
+    
+    // Create random coordinates for the first shape to be drawn.
+    shapeX = int(random(205, 345));
+    shapeY = int(random(35, 350));
+    
+    // Generate a random number from 1 to 2.
+    randColour = int(random(1,3));
+    
+    // shapeTimer1 holds the timer for each shape (if the timer reaches 0 on the shape then it is game over)
+    // shapeTimer2 is used to check if a second has passed in game. If it has, then decrement shapeTimer1 by 1.
+    shapeTimer1 = 3;
+    shapeTimer2 = millis();
+    
+  }
+  
+  void move() {
+    
+    shapeX = mouseX - xOffset;
+    shapeY = mouseY - yOffset;
+    
+    /* Each of the following if statements check whether the shape being dragged has been moved outside of the
+    game interface. If it has, then it will be set so it cannot be dragged outside. */
+    if (shapeX > 550) {
+      shapeX = 550;
+    }
+    
+    if (shapeY > 350) {
+      shapeY = 350;
+    }
+    
+    if (shapeX < 0) {
+      shapeX = 0;
+    }
+    
+    if (shapeY < 0) {
+      shapeY = 0;
+    }
+    
+    display();
+    
+  }
+  
+  void display() {
+    
+    rectMode(CORNER);
+    
+    if (randColour == 1) {
+      fill(255,0,0,255);
+    // Else the shape will be blue.
+    } else {
+      fill(0,0,255,255);
+    }
+    rect(shapeX, shapeY, 50, 50);
+    
+    fill(0,0,0,255);
+    
+    /* Depending on the value of the timer,
+    a different face graphic will be displayed
+    on each shape. */
+    // If the colour of the shape is red:
+    if (randColour == 1) {
+      if (shapeTimer1 == 3) {
+        redHappyFace.resize(50,50);
+        image(redHappyFace, shapeX, shapeY);
+      } else if (shapeTimer1 == 2) {
+        redMediumFace.resize(50,50);
+        image(redMediumFace, shapeX, shapeY);
+      } else {
+        redSadFace.resize(50,50);
+        image(redSadFace, shapeX, shapeY);
+      }
+      
+    // Else if the colour of the shape is blue:
+    } else {
+      if (shapeTimer1 == 3) {
+        blueHappyFace.resize(50,50);
+        image(blueHappyFace, shapeX, shapeY);
+      } else if (shapeTimer1 == 2) {
+        blueMediumFace.resize(50,50);
+        image(blueMediumFace, shapeX, shapeY);
+      } else {
+        blueSadFace.resize(50,50);
+        image(blueSadFace, shapeX, shapeY);
+      }
+    }
+    
+  }
+  
+}
