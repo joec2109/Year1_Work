@@ -1,0 +1,416 @@
+import pygame
+import os
+import random
+pygame.font.init()
+
+# Creates the game window
+width, height = 500, 500
+window = pygame.display.set_mode((width, height))
+pygame.display.set_caption("Pirate Game")
+
+# Load images
+jellyfish = pygame.image.load(os.path.join("assets", "jellyfish.png"))
+coin = pygame.image.load(os.path.join("assets", "coin.png"))
+playerShip = pygame.image.load(os.path.join("assets", "player_boat.png"))
+enemyShip = pygame.image.load(os.path.join("assets", "enemy_boat.png"))
+cannonballImg = pygame.image.load(os.path.join("assets", "cannonball.png"))
+
+# Cannonball class
+class Cannonball:
+
+    # Initialise the cannonball
+    def __init__(self, x, y, img):
+        self.x = x
+        self.y = y
+        self.img = img
+        self.mask = pygame.mask.from_surface(self.img)
+
+    # Blit the cannonball to the window
+    def draw(self, window):
+        window.blit(self.img, (self.x, self.y))
+
+    # Movement of the cannonball
+    def move(self, vel):
+        self.y += vel
+
+    # Returns whether or not a cannonball has moved off the screen.
+    def detectOffScreen(self, height):
+        return not(self.y <= height and self.y >= 0)
+
+    # Detects whether the cannonball has collided with something
+    def collision(self, obj):
+        return collide(self, obj)
+
+# Ship class
+class Ship:
+    # The amount of frames between each cannonball can be fired
+    COOLDOWN = 60
+
+    # The health of each ship is set to 50
+    def __init__(self, x, y, health = 50):
+        # Each ship will have the following variables
+        self.x = x
+        self.y = y
+        self.health = health
+        self.shipImg = None
+        self.cannonballImg = cannonballImg
+        self.coolDown = 0
+        self.cannonballs = []
+
+    def draw(self, window):
+        '''Draws each ship in their new positions after
+        their x and y coordinates have been changed'''
+        window.blit(self.shipImg, (self.x , self.y))
+
+        for cannonball in self.cannonballs:
+            cannonball.draw(window)
+
+    # Handles the movement of each cannonball
+    def moveCannonballs(self, vel, object):
+        self.cooldown()
+        for cannonball in self.cannonballs:
+            cannonball.move(vel)
+            if cannonball.detectOffScreen(height):
+                self.cannonballs.remove(cannonball)
+            elif cannonball.collision(object):
+                object.health -= 10
+                self.cannonballs.remove(cannonball)
+
+    # Handles the cooldown between each cannonball shot
+    def cooldown(self):
+        if self.coolDown >= self.COOLDOWN:
+            self.coolDown = 0
+        elif self.coolDown > 0:
+            self.coolDown += 1
+
+    # Shoots a cannonball if the cooldown timer is up
+    def shoot(self):
+        if self.coolDown == 0:
+            cannonball = Cannonball(self.x + 1.5*cannonballImg.get_width(), self.y, cannonballImg)
+            self.cannonballs.append(cannonball)
+            self.coolDown = 1
+
+    def getWidth(self): # Getter to retrieve the width of the ship
+        return self.shipImg.get_width()
+
+    def getHeight(self):    # Getter to retrieve the height of the ship
+        return self.shipImg.get_height()
+
+# The class 'Player' derives from the 'Ship' class
+class Player(Ship):
+    def __init__(self, x, y, health = 100):
+        # Use the 'Ship's initialisation method on this class
+        super().__init__(x, y, health)
+        self.shipImg = playerShip
+
+        # Create a mask for pixel-perfect collisions
+        self.mask = pygame.mask.from_surface(self.shipImg)
+        self.maxHealth = health
+
+    # Once a cannonball has been spawned, move it upwards.
+    def moveCannonballs(self, vel, objects):
+        self.cooldown()
+        for cannonball in self.cannonballs:
+            cannonball.move(vel)
+            # If a cannonball is off the screen, remove it
+            if cannonball.detectOffScreen(height):
+                self.cannonballs.remove(cannonball)
+            else:
+                for object in objects:
+                    # If a cannonball hits another object, remove the object and cannonball
+                    if cannonball.collision(object):
+                        # If cannonball hits a jellyfish, take off 25 health
+                        if object.shipImg == jellyfish:
+                            if object.health > 25:
+                                object.health -= 25
+                            else:
+                                objects.remove(object)
+                            self.cannonballs.remove(cannonball)
+                        # Else if cannonball hits a ship, destroy the ship in 1 hit
+                        else:
+                            objects.remove(object)
+                            self.cannonballs.remove(cannonball)
+
+    # Draw the healthbar
+    def draw(self, window):
+        super().draw(window)
+        self.healthBar(window)
+
+    # Create a healthbar for the player
+    def healthBar(self, window):
+        # Red healthbar
+        pygame.draw.rect(window, (255, 0, 0), (self.x, self.y + self.shipImg.get_height() + 10, self.shipImg.get_width(), 5))
+        # Green healthbar. Size depends on the health of the player
+        pygame.draw.rect(window, (0, 255, 0), (self.x, self.y + self.shipImg.get_height() + 10, self.shipImg.get_width() * (self.health/self.maxHealth), 5))
+
+# The class 'EnemyShip' derives from the 'Ship' class
+class EnemyShip(Ship):
+
+    def __init__(self, x, y, health = 50):
+        # Use the 'Ship's initialisation method on this class
+        super().__init__(x, y, health)
+        self.shipImg = enemyShip
+        self.maxHealth = health
+
+        # Create a mask for pixel-perfect collisions
+        self.mask = pygame.mask.from_surface(self.shipImg)
+
+    def move(self, vel):
+        self.y += vel
+
+    def shoot(self):
+        if self.coolDown == 0:
+            cannonball = Cannonball(self.x + 1.5*cannonballImg.get_width(), self.y + self.getHeight(), cannonballImg)
+            self.cannonballs.append(cannonball)
+            self.coolDown = 1
+
+    # Draw the healthbar
+    def draw(self, window):
+        super().draw(window)
+        self.healthBar(window)
+
+    # Create a healthbar for the enemy ship
+    def healthBar(self, window):
+        # Red healthbar
+        pygame.draw.rect(window, (255, 0, 0),(self.x, self.y - 10, self.shipImg.get_width(), 5))
+        # Green healthbar. Size depends on the health of the jellyfish
+        pygame.draw.rect(window, (0, 255, 0), (self.x, self.y - 10, self.shipImg.get_width() * (self.health / self.maxHealth),5))
+
+
+# The class 'EnemyJellyfish' derives from the 'Ship' class
+class EnemyJellyfish(Ship):
+
+    # Use the ship's initialisation method on this class
+    def __init__(self, x, y, health = 50):
+        super().__init__(x, y, health)
+        self.shipImg = jellyfish
+        self.maxHealth = health
+
+        # Create a mask for pixel-perfect collisions
+        self.mask = pygame.mask.from_surface(self.shipImg)
+
+    # Once an enemy jellyfish is spawned, move it down the screen constantly
+    def move(self, vel):
+        self.y += vel
+
+    def shoot(self):
+        if self.coolDown == 0:
+            cannonball = Cannonball(self.x + 1.5*cannonballImg.get_width(), self.y + self.getHeight(), cannonballImg)
+            self.cannonballs.append(cannonball)
+            self.coolDown = 1
+
+    # Draw the healthbar
+    def draw(self, window):
+        super().draw(window)
+        self.healthBar(window)
+
+    # Create a healthbar for the jellyfish
+    def healthBar(self, window):
+        # Red healthbar
+        pygame.draw.rect(window, (255, 0, 0),(self.x, self.y - 10, self.shipImg.get_width(), 5))
+        # Green healthbar. Size depends on the health of the jellyfish
+        pygame.draw.rect(window, (0, 255, 0), (self.x, self.y - 10, self.shipImg.get_width() * (self.health / self.maxHealth),5))
+
+class Coin():
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.img = coin
+
+        # Create a mask for pixel-perfect collisions
+        self.mask = pygame.mask.from_surface(self.img)
+
+    def draw(self, window):
+        '''Draws each coin in their new positions after
+        their x and y coordinates have been changed'''
+        window.blit(self.img, (self.x , self.y))
+
+    def move(self, vel):
+        self.y += vel
+
+    def getHeight(self):    # Getter to retrieve the height of the ship
+        return self.img.get_height()
+
+# Check if 2 object masks collide
+def collide(obj1, obj2):
+    # Find the offset of the two masks
+    offset_x = int(obj2.x - obj1.x)
+    offset_y = int(obj2.y - obj1.y)
+    return obj1.mask.overlap(obj2.mask, (offset_x, offset_y)) != None
+
+# The first function to be executed once the game is played
+def main():
+    # Initialise variables
+    running = True
+    fps = 60
+    level = 0
+    lives = 5
+    score = 0
+    gameFont = pygame.font.SysFont("CourierNew", 18)
+    lostFont = pygame.font.SysFont("CourierNew", 60)
+    lostFont2 = pygame.font.SysFont("CourierNew", 18)
+
+    coins = []
+    enemies = []
+    waveLength = 5
+    enemyVel = .5
+
+    playerVel = 2  # Determines the speed of the player's ship
+    cannonballVel = 4
+    player = Player(250, 300)  # Creates a new ship that will be the player's
+
+    clock = pygame.time.Clock()
+
+    lost = False
+
+    # Constantly redraw different assets to the user
+    def redrawWindow():
+        # Colour the background to blue
+        window.fill((0, 100, 255))
+
+        # Display text on the game GUI
+        scoreLabel = gameFont.render(f"Score: {score}", 1, (255, 255, 255))
+        livesLabel = gameFont.render(f"Lives: {lives}", 1, (255, 255, 255))
+        levelLabel = gameFont.render(f"Level: {level}", 1, (255, 255, 255))
+        window.blit(scoreLabel, (5, scoreLabel.get_height() + 5))
+        window.blit(levelLabel, (5, 5))
+        window.blit(livesLabel, (width - livesLabel.get_width() - 5, 5))
+
+        for enemy in enemies:
+            enemy.draw(window)  # Draws the enemy ships
+
+        for coin in coins:
+            coin.draw(window)
+
+        player.draw(window)  # Draws the player's ship onto the game window
+
+        # If player loses, display this to them.
+        if lost:
+            lostLabel = lostFont.render("Game over!", 1, (255, 255, 255))
+            window.blit(lostLabel, (width / 2 - lostLabel.get_width() / 2, height / 2 - lostLabel.get_height() / 2))
+            lostLabel2 = lostFont2.render("Press escape to return to the main menu", 1, (255,255,255))
+            window.blit(lostLabel2, (width / 2 - lostLabel2.get_width() / 2, height / 2 - lostLabel2.get_height() / 2))
+
+        pygame.display.update()  # Updates the display
+
+    # Game loop
+    while running:
+        '''The clock tick speed will be set to 60 (frames per second) so that the
+        game runs consistently on all devices at 60fps'''
+        clock.tick(fps)
+        redrawWindow()
+
+        if lives <= 0 or player.health <= 0:  # Player has lost if lives = 0 or health = 0
+            lost = True
+
+        '''If all enemies have been shot or exit the area, then the
+        player will progress onto the next level'''
+        if len(enemies) == 0:
+            level += 1
+            waveLength += 5
+            # Spawn the enemies
+            for i in range(waveLength):
+                # Randomly select whether a jellyfish or a enemy ship will be spawned
+                a = random.randint(1, 2)
+                if a == 1:
+                    enemy = EnemyShip(random.randrange(100, width - 100), random.randrange(-1500, -100))
+                    coin = Coin(random.randrange(100, width - 100), random.randrange(-1500, -100))
+                else:
+                    enemy = EnemyJellyfish(random.randrange(100, width - 100), random.randrange(-1500, -100))
+                    coin = Coin(random.randrange(100, width - 100), random.randrange(-1500, -100))
+                enemies.append(enemy)
+                coins.append(coin)
+
+        # Loop through each event
+        for event in pygame.event.get():
+            # If player quits, 'running' is set to false
+            if event.type == pygame.QUIT:
+                running = False
+
+        # Detect which keys have been pressed
+        keys = pygame.key.get_pressed()
+
+        '''REPLACE THIS WITH RETURN TO MAIN MENU EVENTUALLY'''
+        if keys[pygame.K_ESCAPE] and lost:
+            lost = False
+            running = True
+        if lost:
+            continue
+
+        # Movement of the player's ship
+        if keys[pygame.K_w] and player.y - playerVel > 0:  # Forwards
+            player.y -= playerVel
+        if keys[pygame.K_s] and player.y + player.getHeight() + playerVel < height:  # Backwards
+            player.y += playerVel
+        if keys[pygame.K_a] and player.x - playerVel > 0:  # Left
+            player.x -= playerVel
+        if keys[pygame.K_d] and player.x + player.getWidth() + playerVel < width:  # Right
+            player.x += playerVel
+
+        # PLayer's ability to shoot a cannonball
+        if keys[pygame.K_SPACE]:
+            player.shoot()
+
+        # For each enemy, move it down the window at the speed of 'enemyVel'
+        for enemy in enemies:
+            enemy.move(enemyVel)
+            enemy.moveCannonballs(cannonballVel, player)
+
+            # 50% chance of enemies shooting a cannonball every second
+            if random.randrange(0, 120) == 1:
+                enemy.shoot()
+
+            ''' If player touches an enemy with their ship, they will
+            lose health and the enemy will be removed '''
+            if collide(enemy, player):
+                player.health -= 10
+                enemies.remove(enemy)
+
+            '''If an enemy reaches the bottom of the window,
+            take a life off the player and remove the enemy ship'''
+            if enemy.y + enemy.getHeight() > height:
+                lives -= 1
+                enemies.remove(enemy)
+
+        for coin in coins:
+            coin.move(enemyVel)
+
+            if collide(coin, player):
+                score += 1
+                coins.remove(coin)
+
+        '''Move the cannonballs that the player shoots at minus the
+        'cannonballVel' as it needs to move up'''
+        player.moveCannonballs(-cannonballVel, enemies)
+
+# Main menu function
+def mainMenu():
+    run = True
+    titleFont = pygame.font.SysFont("couriernew", 25)
+    while run:
+
+        # Draw the various elements onto the main menu
+        window.fill((0,100,255))
+        titleLabel = titleFont.render("Pirates!", 1, (255,255,255))
+        playLabel = titleFont.render("Press the mouse to begin...", 1, (255,255,255))
+        window.blit(titleLabel, (width/2 - titleLabel.get_width()/2, 50))
+        window.blit(playerShip, (width/2 - playerShip.get_width()/2, 250))
+        window.blit(enemyShip, (width/2 - enemyShip.get_width()/2, 150))
+        window.blit(playLabel, (width/2 - playLabel.get_width()/2, 350))
+
+        pygame.display.update()
+
+        # Check each event that happens
+        for event in pygame.event.get():
+            # If player quits game, run set to false
+            if event.type == pygame.QUIT:
+                run = False
+            # If player clicks, game will play
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                main()
+    # If not running, quit
+    pygame.quit()
+
+# The main menu function executes first
+mainMenu()
